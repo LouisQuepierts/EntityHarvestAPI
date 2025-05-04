@@ -5,10 +5,11 @@
   "compatibilityLevel": "JAVA_8",
   "refmap": "entityharvestor.refmap.json",
   "mixins": [
-    "FallingBlockEntityMixin",
+    "PlayerMixin",
     "ShulkerMixin"
   ],
   "client": [
+    "client.BoatRendererMixin",
     "client.FallingBlockRendererMixin",
     "client.MinecraftClientMixin",
     "client.MultiPlayerGameModeMixin",

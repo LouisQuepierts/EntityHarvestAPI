@@ -1,8 +1,10 @@
 package net.quepierts.entityharvest.mixin;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -11,11 +13,15 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SoundType;
 import net.neoforged.neoforge.common.ItemAbilities;
-import net.quepierts.entityharvest.Harvestable;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.quepierts.entityharvest.api.Harvestable;
 import net.quepierts.entityharvest.data.Attachments;
+import net.quepierts.entityharvest.network.DestroyedParticlePacket;
+import org.joml.Vector3f;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -53,7 +59,13 @@ public abstract class ShulkerMixin extends Entity implements Harvestable {
                 1.0F,
                 level.getRandom().nextFloat() * 0.1F + 0.9F
         );
-        level.addParticle(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.SHULKER_BOX.defaultBlockState()), this.getX(), this.getY() + 0.5, this.getZ(), 0, 0.2, 0);
+
+        if (player instanceof ServerPlayer serverPlayer) {
+            final int blockId = Block.getId(Blocks.SHULKER_BOX.defaultBlockState());
+            final BlockPos blockPos = this.getOnPos();
+            final Vector3f position = new Vector3f((float) this.getX(), (float) this.getY(), (float) this.getZ());
+            PacketDistributor.sendToPlayer(serverPlayer, new DestroyedParticlePacket(blockId, position, blockPos));
+        }
     }
 
     @Unique

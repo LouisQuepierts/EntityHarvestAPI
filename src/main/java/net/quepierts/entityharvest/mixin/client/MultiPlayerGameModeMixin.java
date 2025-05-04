@@ -3,7 +3,7 @@ package net.quepierts.entityharvest.mixin.client;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
-import net.quepierts.entityharvest.Harvestable;
+import net.quepierts.entityharvest.api.Harvestable;
 import net.quepierts.entityharvest.data.Attachments;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

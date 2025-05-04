@@ -6,12 +6,12 @@ import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.neoforged.neoforge.client.ClientHooks;
 import net.neoforged.neoforge.client.event.InputEvent;
-import net.quepierts.entityharvest.Harvestable;
+import net.quepierts.entityharvest.EntityHarvest;
+import net.quepierts.entityharvest.api.Harvestable;
 import net.quepierts.entityharvest.data.Attachments;
 import net.quepierts.entityharvest.data.HarvestProgressAttachment;
 import org.spongepowered.asm.mixin.Final;
@@ -34,8 +34,6 @@ public abstract class MinecraftClientMixin {
 
     @Shadow @Final public Options options;
 
-    @Unique int entityHarvestor$fallingBlockDestroyTicks = 0;
-
     @Inject(
             method = "continueAttack",
             at = @At(
@@ -50,24 +48,30 @@ public abstract class MinecraftClientMixin {
     ) {
         if (leftClick && this.hitResult != null && this.hitResult.getType() == HitResult.Type.ENTITY) {
             Entity entity = ((EntityHitResult) this.hitResult).getEntity();
+            Harvestable harvestable = EntityHarvest.getHarvestable(entity);
 
-            if (entity instanceof Harvestable harvestable
-                    && (!entity.hasData(Attachments.HARVEST_PROGRESS) || !entity.getData(Attachments.HARVEST_PROGRESS).isDestroyed())) {
-                if (!harvestable.canHarvest(this.player)) {
-                    return;
-                }
+            if (harvestable == null) {
+                return;
+            }
 
-                InputEvent.InteractionKeyMappingTriggered inputEvent = ClientHooks.onClickInput(0, this.options.keyAttack, InteractionHand.MAIN_HAND);
-                if (inputEvent.shouldSwingHand()) {
-                    this.gameMode.attack(this.player, entity);
-                    this.player.swing(InteractionHand.MAIN_HAND);
+            if (!entity.hasData(Attachments.HARVEST_PROGRESS)) {
+                return;
+            }
 
-                    this.entityHarvestor$fallingBlockDestroyTicks++;
-                    HarvestProgressAttachment attachment = entity.getData(Attachments.HARVEST_PROGRESS);
-                    if (attachment.isDestroyed()) {
-                        this.entityHarvestor$fallingBlockDestroyTicks = 0;
-                    }
-                }
+            HarvestProgressAttachment attachment = entity.getData(Attachments.HARVEST_PROGRESS);
+
+            if (attachment.isDestroyed()) {
+                return;
+            }
+
+            if (!harvestable.canHarvest(this.player)) {
+                return;
+            }
+            this.gameMode.attack(this.player, entity);
+
+            InputEvent.InteractionKeyMappingTriggered inputEvent = ClientHooks.onClickInput(0, this.options.keyAttack, InteractionHand.MAIN_HAND);
+            if (inputEvent.shouldSwingHand()) {
+                this.player.swing(InteractionHand.MAIN_HAND);
             }
         }
     }

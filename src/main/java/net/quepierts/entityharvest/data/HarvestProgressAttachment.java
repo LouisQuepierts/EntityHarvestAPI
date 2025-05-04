@@ -49,11 +49,11 @@ public class HarvestProgressAttachment {
     public void tick() {
         if (this.tick == 20) {
             this.destroyTick = 0;
-            this.progress = 0;
+            this.progress = Math.max(0, this.progress - 0.2f);
             this.tick = 0;
         }
 
-        if (this.destroyTick != 0) {
+        if (this.progress != 0) {
             this.tick ++;
         }
     }
