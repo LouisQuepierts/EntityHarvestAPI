@@ -24,29 +24,38 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.quepierts.entityharvest.ai.MissingHeadPanicGoal;
 import net.quepierts.entityharvest.api.DoubleLineIterator;
+import net.quepierts.entityharvest.api.HarvestWrapper;
 import net.quepierts.entityharvest.api.OutlineRelevant;
 import net.quepierts.entityharvest.data.HarvestProgressAttachment;
 import net.quepierts.entityharvest.network.SyncDestroyedParticlePacket;
 import org.joml.Vector3f;
 
 import java.util.Optional;
+import java.util.function.BooleanSupplier;
 
 public class SkeletonHarvestWrapper<T extends AbstractSkeleton> extends HarvestWrapper<T> {
     public static final double PANIC_RUNNING_SPEED = 1.5;
+
     private final Vector3f shift;
     private final DoubleLineIterator shape;
     private final BlockState block;
     private final Item head;
+    private final BooleanSupplier isEnabled;
 
-    public SkeletonHarvestWrapper(Vector3f shift, VoxelShape shape, Block block) {
+    public SkeletonHarvestWrapper(Vector3f shift, VoxelShape shape, Block block, BooleanSupplier isEnabled) {
         this.shift = shift;
         this.shape = shape::forAllEdges;
         this.block = block.defaultBlockState();
         this.head = block.asItem();
+        this.isEnabled = isEnabled;
     }
 
     @Override
     public boolean canHarvest(Player player) {
+        if (!this.isEnabled.getAsBoolean()) {
+            return false;
+        }
+
         if (this.entity == null) {
             return false;
         }

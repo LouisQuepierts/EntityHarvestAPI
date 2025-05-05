@@ -1,7 +1,7 @@
 package net.quepierts.entityharvest.api;
 
+import net.minecraft.world.entity.Entity;
 import net.neoforged.bus.api.Event;
-import net.quepierts.entityharvest.harvest.HarvestWrapper;
 
 import java.util.Map;
 
@@ -13,7 +13,7 @@ public final class RegisterHarvestWrapperEvent extends Event {
         this.wrappers = wrappers;
     }
 
-    public <T> void register(Class<T> clazz, HarvestWrapper<T> wrapper) {
+    public <T extends Entity> void register(Class<T> clazz, HarvestWrapper<T> wrapper) {
         this.wrappers.put(clazz, wrapper);
     }
 }

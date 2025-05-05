@@ -1,21 +1,16 @@
 package net.quepierts.entityharvest;
 
-import com.mojang.logging.LogUtils;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
 import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.monster.Skeleton;
 import net.minecraft.world.entity.monster.WitherSkeleton;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.vehicle.Boat;
-import net.minecraft.world.entity.vehicle.ChestBoat;
-import net.minecraft.world.entity.vehicle.Minecart;
-import net.minecraft.world.entity.vehicle.MinecartChest;
+import net.minecraft.world.entity.vehicle.*;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -24,6 +19,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.EventHooks;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
@@ -31,6 +27,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.quepierts.entityharvest.api.HarvestWrapper;
 import net.quepierts.entityharvest.api.Harvestable;
 import net.quepierts.entityharvest.api.RegisterHarvestWrapperEvent;
 import net.quepierts.entityharvest.data.EntityHarvestAttachments;
@@ -39,7 +36,6 @@ import net.quepierts.entityharvest.harvest.*;
 import net.quepierts.entityharvest.network.SyncHarvestProgressPacket;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3f;
-import org.slf4j.Logger;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -53,6 +49,7 @@ public class EntityHarvest {
     public EntityHarvest(IEventBus modEventBus, ModContainer modContainer) {
         NeoForge.EVENT_BUS.register(this);
         EntityHarvestAttachments.REGISTER.register(modEventBus);
+        modContainer.registerConfig(ModConfig.Type.SERVER, Config.SPEC);
 
         this.registerHarvestableWrappers();
     }
@@ -60,12 +57,18 @@ public class EntityHarvest {
     private void registerHarvestableWrappers() {
         wrappers.put(Boat.class, new BoatHarvestWrapper<>());
         wrappers.put(ChestBoat.class, new BoatHarvestWrapper<ChestBoat>());
+
         wrappers.put(Minecart.class, new MinecartHarvestWrapper<Minecart>());
         wrappers.put(MinecartChest.class, new MinecartHarvestWrapper<MinecartChest>());
+        wrappers.put(MinecartHopper.class, new MinecartHarvestWrapper<MinecartHopper>());
+        wrappers.put(MinecartFurnace.class, new MinecartHarvestWrapper<MinecartFurnace>());
+        wrappers.put(MinecartSpawner.class, new MinecartHarvestWrapper<MinecartSpawner>());
+        wrappers.put(MinecartTNT.class, new MinecartHarvestWrapper<MinecartTNT>());
+
         wrappers.put(EndCrystal.class, new EndCrystalHarvestWrapper());
         wrappers.put(FallingBlockEntity.class, new FallingBlockEntityHarvestWrapper());
-        wrappers.put(Skeleton.class, new SkeletonHarvestWrapper<Skeleton>(new Vector3f(0.0f, 24.0f / 16.0f, 0.0f), EntityHarvestShapes.SKELETON_SKULL, Blocks.SKELETON_SKULL));
-        wrappers.put(WitherSkeleton.class, new SkeletonHarvestWrapper<WitherSkeleton>(new Vector3f(0.0f, 29.0f / 16.0f, 0.0f), EntityHarvestShapes.WITHER_SKELETON_SKULL, Blocks.WITHER_SKELETON_SKULL));
+        wrappers.put(Skeleton.class, new SkeletonHarvestWrapper<Skeleton>(new Vector3f(0.0f, 24.0f / 16.0f, 0.0f), EntityHarvestShapes.SKELETON_SKULL, Blocks.SKELETON_SKULL, Config::isEnableSkeletonHarvest));
+        wrappers.put(WitherSkeleton.class, new SkeletonHarvestWrapper<WitherSkeleton>(new Vector3f(0.0f, 29.0f / 16.0f, 0.0f), EntityHarvestShapes.WITHER_SKELETON_SKULL, Blocks.WITHER_SKELETON_SKULL, Config::isEnableWitherSkeletonHarvest));
 
         NeoForge.EVENT_BUS.post(new RegisterHarvestWrapperEvent(wrappers));
     }

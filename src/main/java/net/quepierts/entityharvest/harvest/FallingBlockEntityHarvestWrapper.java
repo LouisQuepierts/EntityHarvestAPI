@@ -12,13 +12,19 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.quepierts.entityharvest.Config;
 import net.quepierts.entityharvest.api.DoubleLineIterator;
+import net.quepierts.entityharvest.api.HarvestWrapper;
 import net.quepierts.entityharvest.network.SyncDestroyedParticlePacket;
 import org.joml.Vector3f;
 
 public class FallingBlockEntityHarvestWrapper extends HarvestWrapper<FallingBlockEntity> {
     @Override
     public boolean canHarvest(Player player) {
+        if (!Config.isEnableFallingBlockHarvest()) {
+            return false;
+        }
+
         FallingBlockEntity entity = this.entity;
         return player.hasCorrectToolForDrops(entity.getBlockState(), entity.level(), entity.getStartPos());
     }

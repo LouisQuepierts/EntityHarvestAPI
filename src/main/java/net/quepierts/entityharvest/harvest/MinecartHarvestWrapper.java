@@ -14,7 +14,9 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.quepierts.entityharvest.Config;
 import net.quepierts.entityharvest.api.DoubleLineIterator;
+import net.quepierts.entityharvest.api.HarvestWrapper;
 import net.quepierts.entityharvest.api.OutlineRelevant;
 
 public class MinecartHarvestWrapper<T extends AbstractMinecart> extends HarvestWrapper<T> {
@@ -72,7 +74,7 @@ public class MinecartHarvestWrapper<T extends AbstractMinecart> extends HarvestW
 
     @Override
     public boolean isOverrideHarvest() {
-        return true;
+        return Config.isOverrideMinecartHarvest();
     }
 
     static {
