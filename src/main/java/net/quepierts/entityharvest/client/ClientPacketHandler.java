@@ -18,9 +18,9 @@ import net.neoforged.api.distmarker.OnlyIn;
 import net.quepierts.entityharvest.EntityHarvest;
 import net.quepierts.entityharvest.data.EntityHarvestAttachments;
 import net.quepierts.entityharvest.data.HarvestProgressAttachment;
-import net.quepierts.entityharvest.network.SyncHarvestProgressPacket;
 import net.quepierts.entityharvest.network.SyncDestroyedParticlePacket;
 import net.quepierts.entityharvest.network.SyncHarvestEntityPacket;
+import net.quepierts.entityharvest.network.SyncHarvestProgressPacket;
 import org.joml.Vector3f;
 
 @OnlyIn(Dist.CLIENT)

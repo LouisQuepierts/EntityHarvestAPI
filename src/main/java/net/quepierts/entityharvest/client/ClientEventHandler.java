@@ -29,8 +29,6 @@ import net.quepierts.entityharvest.network.UpdateHarvestEntityPacket;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-import java.util.Objects;
-
 @EventBusSubscriber(modid = EntityHarvest.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public class ClientEventHandler {
     @SubscribeEvent
