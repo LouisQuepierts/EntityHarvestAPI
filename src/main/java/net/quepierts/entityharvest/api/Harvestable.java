@@ -2,12 +2,14 @@ package net.quepierts.entityharvest.api;
 
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.shapes.Shapes;
-import net.minecraft.world.phys.shapes.VoxelShape;
+import net.quepierts.entityharvest.data.HarvestProgressAttachment;
+import org.joml.Vector3f;
 
 /**
  * The interface for the entity that can be harvested.
  */
 public interface Harvestable {
+    Vector3f ZERO = new Vector3f();
 
     /**
      * Check if the entity can be harvested.
@@ -40,7 +42,41 @@ public interface Harvestable {
      * Get the shape of the entity for rendering outlines.
      * @return the shape of the entity
      */
-    default VoxelShape getShape() {
-        return Shapes.block();
+    default DoubleLineIterator getOutline(boolean isShiftDown) {
+        return Shapes.block()::forAllEdges;
+    }
+
+    /**
+     * Get the outline relevant of the entity for rendering outlines.
+     * @return the outline relevant of the entity
+     */
+    default OutlineRelevant getOutlineRelevant() {
+        return OutlineRelevant.NONE;
+    }
+
+    /**
+     * Get the shift of the outline.
+     * @return the shift of the outline
+     */
+    default Vector3f getOutlineShift() {
+        return ZERO;
+    }
+
+    /**
+     * Whether to override the default harvest behavior.
+     * If not, the attack will be handled by the game.
+     * Or else the attack will be handled by the mod.
+     * @return whether to override the default harvest behavior
+     */
+    default boolean isOverrideHarvest() {
+        return false;
+    }
+
+    /**
+     * Initialize the entity by attachment
+     * @param attachment the attachment of the entity
+     */
+    default void init(HarvestProgressAttachment attachment) {
+
     }
 }

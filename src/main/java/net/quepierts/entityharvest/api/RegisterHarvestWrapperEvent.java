@@ -6,7 +6,7 @@ import net.quepierts.entityharvest.harvest.HarvestWrapper;
 import java.util.Map;
 
 @SuppressWarnings("unused")
-public class RegisterHarvestWrapperEvent extends Event {
+public final class RegisterHarvestWrapperEvent extends Event {
     private final Map<Class<?>, HarvestWrapper<?>> wrappers;
 
     public RegisterHarvestWrapperEvent(Map<Class<?>, HarvestWrapper<?>> wrappers) {

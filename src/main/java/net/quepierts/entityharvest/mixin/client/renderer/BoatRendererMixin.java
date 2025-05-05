@@ -1,17 +1,16 @@
-package net.quepierts.entityharvest.mixin.client;
+package net.quepierts.entityharvest.mixin.client.renderer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.SheetedDecalTextureGenerator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.client.model.ListModel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.BoatRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.ModelBakery;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.vehicle.Boat;
-import net.quepierts.entityharvest.data.Attachments;
+import net.quepierts.entityharvest.client.DestroyTextureVertexConsumer;
+import net.quepierts.entityharvest.data.EntityHarvestAttachments;
 import net.quepierts.entityharvest.data.HarvestProgressAttachment;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -31,7 +30,7 @@ public abstract class BoatRendererMixin {
                     shift = At.Shift.AFTER
             )
     )
-    private void entityharvest$render(
+    private void entityharvest$renderDestroy(
             Boat entity,
             float entityYaw,
             float partialTicks,
@@ -40,20 +39,17 @@ public abstract class BoatRendererMixin {
             int packedLight,
             CallbackInfo ci
     ) {
-        if (!entity.hasData(Attachments.HARVEST_PROGRESS)) {
+        if (!entity.hasData(EntityHarvestAttachments.HARVEST_PROGRESS)) {
             return;
         }
 
-        HarvestProgressAttachment progressAttachment = entity.getData(Attachments.HARVEST_PROGRESS);
+        HarvestProgressAttachment attachment = entity.getData(EntityHarvestAttachments.HARVEST_PROGRESS);
 
-        if (progressAttachment.getProgress() == 0.0f) {
+        if (attachment.getProgress() == 0.0f) {
             return;
         }
 
-        VertexConsumer sheeted = new SheetedDecalTextureGenerator(
-                buffer.getBuffer(ModelBakery.DESTROY_TYPES.get(progressAttachment.getDestroyType())),
-                poseStack.last(), 1.0f
-        );
+        VertexConsumer sheeted = DestroyTextureVertexConsumer.getVertexConsumer(buffer, 8, 4, attachment.getDestroyType());
         Pair<ResourceLocation, ListModel<Boat>> pair = this.getModelWithLocation(entity);
         ListModel<Boat> model = pair.getSecond();
         model.renderToBuffer(poseStack, sheeted, packedLight, OverlayTexture.NO_OVERLAY);

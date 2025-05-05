@@ -6,7 +6,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import net.quepierts.entityharvest.EntityHarvest;
 
-public class Attachments {
+public class EntityHarvestAttachments {
     public static final DeferredRegister<AttachmentType<?>> REGISTER = DeferredRegister.create(
             NeoForgeRegistries.ATTACHMENT_TYPES, EntityHarvest.MODID
     );

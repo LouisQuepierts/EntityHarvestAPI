@@ -1,23 +1,19 @@
 package net.quepierts.entityharvest.mixin.client;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.Options;
-import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
-import net.neoforged.neoforge.client.ClientHooks;
-import net.neoforged.neoforge.client.event.InputEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.quepierts.entityharvest.EntityHarvest;
 import net.quepierts.entityharvest.api.Harvestable;
-import net.quepierts.entityharvest.data.Attachments;
+import net.quepierts.entityharvest.data.EntityHarvestAttachments;
 import net.quepierts.entityharvest.data.HarvestProgressAttachment;
-import org.spongepowered.asm.mixin.Final;
+import net.quepierts.entityharvest.network.UpdateHarvestEntityPacket;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -30,10 +26,6 @@ public abstract class MinecraftClientMixin {
 
     @Shadow @Nullable public LocalPlayer player;
 
-    @Shadow @Nullable public MultiPlayerGameMode gameMode;
-
-    @Shadow @Final public Options options;
-
     @Inject(
             method = "continueAttack",
             at = @At(
@@ -42,10 +34,16 @@ public abstract class MinecraftClientMixin {
                     shift = At.Shift.AFTER
             )
     )
-    private void continueAttackFallingBlock(
+    private void entityharvest$continueHarvest(
             boolean leftClick,
             CallbackInfo ci
     ) {
+        LocalPlayer player = this.player;
+
+        if (player == null) {
+            return;
+        }
+
         if (leftClick && this.hitResult != null && this.hitResult.getType() == HitResult.Type.ENTITY) {
             Entity entity = ((EntityHitResult) this.hitResult).getEntity();
             Harvestable harvestable = EntityHarvest.getHarvestable(entity);
@@ -54,24 +52,24 @@ public abstract class MinecraftClientMixin {
                 return;
             }
 
-            if (!entity.hasData(Attachments.HARVEST_PROGRESS)) {
+            if (!entity.hasData(EntityHarvestAttachments.HARVEST_PROGRESS)) {
                 return;
             }
 
-            HarvestProgressAttachment attachment = entity.getData(Attachments.HARVEST_PROGRESS);
+            HarvestProgressAttachment attachment = entity.getData(EntityHarvestAttachments.HARVEST_PROGRESS);
 
             if (attachment.isDestroyed()) {
                 return;
             }
 
-            if (!harvestable.canHarvest(this.player)) {
+            if (!harvestable.canHarvest(player) && !harvestable.isOverrideHarvest()) {
                 return;
             }
-            this.gameMode.attack(this.player, entity);
 
-            InputEvent.InteractionKeyMappingTriggered inputEvent = ClientHooks.onClickInput(0, this.options.keyAttack, InteractionHand.MAIN_HAND);
-            if (inputEvent.shouldSwingHand()) {
-                this.player.swing(InteractionHand.MAIN_HAND);
+            player.swing(InteractionHand.MAIN_HAND);
+            if (EntityHarvest.performHarvest(player, entity, harvestable)) {
+                UpdateHarvestEntityPacket packet = new UpdateHarvestEntityPacket(entity.getId(), true);
+                PacketDistributor.sendToServer(packet);
             }
         }
     }

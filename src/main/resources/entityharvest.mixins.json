@@ -5,16 +5,19 @@
   "compatibilityLevel": "JAVA_8",
   "refmap": "entityharvestor.refmap.json",
   "mixins": [
-    "PlayerMixin",
     "ShulkerMixin"
   ],
   "client": [
-    "client.BoatRendererMixin",
-    "client.FallingBlockRendererMixin",
+    "client.renderer.BoatRendererMixin",
+    "client.renderer.EndCrystalRendererMixin",
+    "client.renderer.FallingBlockRendererMixin",
+    "client.renderer.MinecartRendererMixin",
     "client.MinecraftClientMixin",
     "client.MultiPlayerGameModeMixin",
-    "client.ShulkerModelMixin",
-    "client.ShulkerRendererMixin"
+    "client.renderer.ShulkerRendererMixin",
+    "client.renderer.SkeletonRendererMixin",
+    "client.model.ShulkerModelMixin",
+    "client.model.SkeletonModelMixin"
   ],
   "injectors": {
     "defaultRequire": 1

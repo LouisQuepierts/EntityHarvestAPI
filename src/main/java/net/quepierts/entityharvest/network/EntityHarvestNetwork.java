@@ -1,5 +1,6 @@
 package net.quepierts.entityharvest.network;
 
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -15,16 +16,33 @@ public final class EntityHarvestNetwork {
     private static void onRegisterPayload(final RegisterPayloadHandlersEvent event) {
         final PayloadRegistrar registrar = event.registrar(PROTOCOL_VERSION);
         registrar.playToClient(
-                ClientBoundHarvestProgressPacket.TYPE,
-                ClientBoundHarvestProgressPacket.STREAM_CODEC,
-                ClientBoundHarvestProgressPacket::handle
+                SyncHarvestProgressPacket.TYPE,
+                SyncHarvestProgressPacket.STREAM_CODEC,
+                (packet, context) -> context.enqueueWork(
+                        () -> ClientPacketHandler.onSyncHarvestProgress(packet)
+                )
         );
         registrar.playToClient(
-                DestroyedParticlePacket.TYPE,
-                DestroyedParticlePacket.STREAM_CODEC,
+                SyncDestroyedParticlePacket.TYPE,
+                SyncDestroyedParticlePacket.STREAM_CODEC,
                 (packet, context) -> context.enqueueWork(
                         () -> ClientPacketHandler.onDestroyParticlePacket(packet)
                 )
+        );
+        registrar.playToClient(
+                SyncHarvestEntityPacket.TYPE,
+                SyncHarvestEntityPacket.STREAM_CODEC,
+                (packet, context) -> context.enqueueWork(
+                        () -> ClientPacketHandler.onHarvestPacket(packet)
+                )
+        );
+        registrar.playToServer(
+                UpdateHarvestEntityPacket.TYPE,
+                UpdateHarvestEntityPacket.STREAM_CODEC,
+                (packet, context) -> {
+                    Player player = context.player();
+                    packet.handle(player);
+                }
         );
     }
 }

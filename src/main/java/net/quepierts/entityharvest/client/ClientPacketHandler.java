@@ -6,17 +6,42 @@ import net.minecraft.client.particle.ParticleEngine;
 import net.minecraft.client.particle.TerrainParticle;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import net.quepierts.entityharvest.network.DestroyedParticlePacket;
+import net.quepierts.entityharvest.EntityHarvest;
+import net.quepierts.entityharvest.data.EntityHarvestAttachments;
+import net.quepierts.entityharvest.data.HarvestProgressAttachment;
+import net.quepierts.entityharvest.network.SyncHarvestProgressPacket;
+import net.quepierts.entityharvest.network.SyncDestroyedParticlePacket;
+import net.quepierts.entityharvest.network.SyncHarvestEntityPacket;
 import org.joml.Vector3f;
 
 @OnlyIn(Dist.CLIENT)
 public class ClientPacketHandler {
-    public static void onDestroyParticlePacket(DestroyedParticlePacket packet) {
+    public static void onHarvestPacket(SyncHarvestEntityPacket packet) {
+        final ClientLevel level = Minecraft.getInstance().level;
+        if (level == null) {
+            return;
+        }
+
+        final Player player = level.getPlayerByUUID(packet.playerUuid());
+        final Entity target = level.getEntity(packet.entityId());
+        if (player == null || target == null) {
+            return;
+        }
+
+        player.swing(InteractionHand.MAIN_HAND);
+        EntityHarvest.onHarvestEntity(target, player);
+    }
+
+    public static void onDestroyParticlePacket(SyncDestroyedParticlePacket packet) {
         ClientLevel level = Minecraft.getInstance().level;
 
         if (level == null) {
@@ -66,5 +91,16 @@ public class ClientPacketHandler {
             }
 
         });
+    }
+
+    public static void onSyncHarvestProgress(SyncHarvestProgressPacket packet) {
+        Level level = Minecraft.getInstance().level;
+        Entity entity = level.getEntity(packet.entityId());
+
+        if (entity != null) {
+            HarvestProgressAttachment attachment = entity.getData(EntityHarvestAttachments.HARVEST_PROGRESS);
+            attachment.setProgress(packet.progress());
+            attachment.setDestroyed(packet.destroyed());
+        }
     }
 }

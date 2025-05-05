@@ -9,21 +9,21 @@ import net.minecraft.resources.ResourceLocation;
 import net.quepierts.entityharvest.EntityHarvest;
 import org.joml.Vector3f;
 
-public record DestroyedParticlePacket(
+public record SyncDestroyedParticlePacket(
         int blockId,
         Vector3f position,
         BlockPos startBlockPos
 ) implements CustomPacketPayload {
-    public static final Type<DestroyedParticlePacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(EntityHarvest.MODID, "destroy_particle"));
+    public static final Type<SyncDestroyedParticlePacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(EntityHarvest.MODID, "destroy_particle"));
 
-    public static final StreamCodec<ByteBuf, DestroyedParticlePacket> STREAM_CODEC = StreamCodec.composite(
+    public static final StreamCodec<ByteBuf, SyncDestroyedParticlePacket> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.INT,
-            DestroyedParticlePacket::blockId,
+            SyncDestroyedParticlePacket::blockId,
             ByteBufCodecs.VECTOR3F,
-            DestroyedParticlePacket::position,
+            SyncDestroyedParticlePacket::position,
             BlockPos.STREAM_CODEC,
-            DestroyedParticlePacket::startBlockPos,
-            DestroyedParticlePacket::new
+            SyncDestroyedParticlePacket::startBlockPos,
+            SyncDestroyedParticlePacket::new
     );
 
     @Override

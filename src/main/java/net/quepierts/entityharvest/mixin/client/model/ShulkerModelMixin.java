@@ -1,9 +1,9 @@
-package net.quepierts.entityharvest.mixin.client;
+package net.quepierts.entityharvest.mixin.client.model;
 
 import net.minecraft.client.model.ShulkerModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.world.entity.monster.Shulker;
-import net.quepierts.entityharvest.data.Attachments;
+import net.quepierts.entityharvest.data.EntityHarvestAttachments;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -19,8 +19,8 @@ public class ShulkerModelMixin<T extends Shulker> {
             method = "setupAnim(Lnet/minecraft/world/entity/monster/Shulker;FFFFF)V",
             at = @At("HEAD")
     )
-    private void hideLid(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch, CallbackInfo ci) {
-        if (entity.hasData(Attachments.HARVEST_PROGRESS) && entity.getData(Attachments.HARVEST_PROGRESS).isDestroyed()) {
+    private void entityharvest$hideLid(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch, CallbackInfo ci) {
+        if (entity.hasData(EntityHarvestAttachments.HARVEST_PROGRESS) && entity.getData(EntityHarvestAttachments.HARVEST_PROGRESS).isDestroyed()) {
             this.lid.xScale = 0;
             this.lid.yScale = 0;
             this.lid.zScale = 0;

@@ -4,7 +4,7 @@ import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.quepierts.entityharvest.api.Harvestable;
-import net.quepierts.entityharvest.data.Attachments;
+import net.quepierts.entityharvest.data.EntityHarvestAttachments;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -21,9 +21,11 @@ public class MultiPlayerGameModeMixin {
             cancellable = true
     )
     private void onAttackedHarvestableEntity(Player player, Entity targetEntity, CallbackInfo ci) {
-        if (targetEntity instanceof Harvestable harvestable && harvestable.canHarvest(player)) {
-            if (!targetEntity.hasData(Attachments.HARVEST_PROGRESS) || !targetEntity.getData(Attachments.HARVEST_PROGRESS).isDestroyed()) {
-                ci.cancel();
+        if (targetEntity instanceof Harvestable harvestable) {
+            if (harvestable.isOverrideHarvest() || harvestable.canHarvest(player)) {
+                if (!targetEntity.hasData(EntityHarvestAttachments.HARVEST_PROGRESS) || !targetEntity.getData(EntityHarvestAttachments.HARVEST_PROGRESS).isDestroyed()) {
+                    ci.cancel();
+                }
             }
         }
     }

@@ -18,9 +18,11 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SoundType;
 import net.neoforged.neoforge.common.ItemAbilities;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.quepierts.entityharvest.api.DoubleLineIterator;
 import net.quepierts.entityharvest.api.Harvestable;
-import net.quepierts.entityharvest.data.Attachments;
-import net.quepierts.entityharvest.network.DestroyedParticlePacket;
+import net.quepierts.entityharvest.data.EntityHarvestAttachments;
+import net.quepierts.entityharvest.harvest.EntityHarvestShapes;
+import net.quepierts.entityharvest.network.SyncDestroyedParticlePacket;
 import org.joml.Vector3f;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -35,6 +37,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class ShulkerMixin extends Entity implements Harvestable {
     @Shadow @Final protected static EntityDataAccessor<Byte> DATA_PEEK_ID;
 
+    @Shadow protected abstract boolean isClosed();
+
     private ShulkerMixin(EntityType<?> entityType, Level level) {
         super(entityType, level);
     }
@@ -42,7 +46,7 @@ public abstract class ShulkerMixin extends Entity implements Harvestable {
     @Unique
     @Override
     public boolean canHarvest(Player player) {
-        return player.getMainHandItem().canPerformAction(ItemAbilities.PICKAXE_DIG);
+        return this.isClosed() && player.getMainHandItem().canPerformAction(ItemAbilities.PICKAXE_DIG);
     }
 
     @Unique
@@ -64,7 +68,7 @@ public abstract class ShulkerMixin extends Entity implements Harvestable {
             final int blockId = Block.getId(Blocks.SHULKER_BOX.defaultBlockState());
             final BlockPos blockPos = this.getOnPos();
             final Vector3f position = new Vector3f((float) this.getX(), (float) this.getY(), (float) this.getZ());
-            PacketDistributor.sendToPlayer(serverPlayer, new DestroyedParticlePacket(blockId, position, blockPos));
+            PacketDistributor.sendToPlayer(serverPlayer, new SyncDestroyedParticlePacket(blockId, position, blockPos));
         }
     }
 
@@ -92,13 +96,21 @@ public abstract class ShulkerMixin extends Entity implements Harvestable {
         return Blocks.END_STONE.defaultBlockState().getDestroyProgress(player, this.level(), this.getOnPos());
     }
 
+    @Unique
+    @Override
+    public DoubleLineIterator getOutline(boolean isShiftDown) {
+        return EntityHarvestShapes.SHULKER::forAllEdges;
+    }
+
     @Inject(
             method = "isClosed",
             at = @At("HEAD"),
             cancellable = true
     )
-    private void eh$isClosed(CallbackInfoReturnable<Boolean> cir) {
-        if (this.hasData(Attachments.HARVEST_PROGRESS) && this.getData(Attachments.HARVEST_PROGRESS).isDestroyed()) {
+    private void entityharvest$isClosed(CallbackInfoReturnable<Boolean> cir) {
+        if (this.hasData(EntityHarvestAttachments.HARVEST_PROGRESS)
+                && this.getData(EntityHarvestAttachments.HARVEST_PROGRESS).isDestroyed()
+        ) {
             cir.setReturnValue(false);
             cir.cancel();
         }
@@ -109,9 +121,11 @@ public abstract class ShulkerMixin extends Entity implements Harvestable {
             at = @At("HEAD"),
             cancellable = true
     )
-    private void eh$setRawPeekAmount(int peekAmount, CallbackInfo ci) {
-        if (this.hasData(Attachments.HARVEST_PROGRESS) && this.getData(Attachments.HARVEST_PROGRESS).isDestroyed()) {
-            this.entityData.set(DATA_PEEK_ID, (byte) 0);
+    private void entityharvest$setRawPeekAmount(int peekAmount, CallbackInfo ci) {
+        if (this.hasData(EntityHarvestAttachments.HARVEST_PROGRESS)
+                && this.getData(EntityHarvestAttachments.HARVEST_PROGRESS).isDestroyed()
+        ) {
+            this.entityData.set(DATA_PEEK_ID, (byte) 8);
             ci.cancel();
         }
     }

@@ -12,7 +12,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.network.PacketDistributor;
-import net.quepierts.entityharvest.network.DestroyedParticlePacket;
+import net.quepierts.entityharvest.api.DoubleLineIterator;
+import net.quepierts.entityharvest.network.SyncDestroyedParticlePacket;
 import org.joml.Vector3f;
 
 public class FallingBlockEntityHarvestWrapper extends HarvestWrapper<FallingBlockEntity> {
@@ -31,7 +32,7 @@ public class FallingBlockEntityHarvestWrapper extends HarvestWrapper<FallingBloc
             final int blockId = Block.getId(blockState);
             final BlockPos blockPos = entity.getStartPos();
             final Vector3f position = new Vector3f((float) entity.getX(), (float) entity.getY(), (float) entity.getZ());
-            PacketDistributor.sendToPlayer(serverPlayer, new DestroyedParticlePacket(blockId, position, blockPos));
+            PacketDistributor.sendToPlayer(serverPlayer, new SyncDestroyedParticlePacket(blockId, position, blockPos));
         }
 
         if (entity.dropItem
@@ -77,5 +78,10 @@ public class FallingBlockEntityHarvestWrapper extends HarvestWrapper<FallingBloc
     public float getProgress(Player player) {
         FallingBlockEntity entity = this.entity;
         return entity.getBlockState().getDestroyProgress(player, entity.level(), entity.getStartPos());
+    }
+
+    @Override
+    public DoubleLineIterator getOutline(boolean isShiftDown) {
+        return this.entity.getBlockState().getShape(this.entity.level(), this.entity.getStartPos())::forAllEdges;
     }
 }

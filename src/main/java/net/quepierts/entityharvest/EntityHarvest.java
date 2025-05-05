@@ -1,72 +1,76 @@
 package net.quepierts.entityharvest;
 
 import com.mojang.logging.LogUtils;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
 import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.entity.monster.Skeleton;
+import net.minecraft.world.entity.monster.WitherSkeleton;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.vehicle.Boat;
+import net.minecraft.world.entity.vehicle.ChestBoat;
+import net.minecraft.world.entity.vehicle.Minecart;
+import net.minecraft.world.entity.vehicle.MinecartChest;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.phys.AABB;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.EventHooks;
-import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
-import net.neoforged.neoforge.event.level.ChunkWatchEvent;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.quepierts.entityharvest.api.Harvestable;
 import net.quepierts.entityharvest.api.RegisterHarvestWrapperEvent;
-import net.quepierts.entityharvest.data.Attachments;
+import net.quepierts.entityharvest.data.EntityHarvestAttachments;
 import net.quepierts.entityharvest.data.HarvestProgressAttachment;
-import net.quepierts.entityharvest.harvest.BoatHarvestWrapper;
-import net.quepierts.entityharvest.harvest.EndCrystalHarvestWrapper;
-import net.quepierts.entityharvest.harvest.FallingBlockEntityHarvestWrapper;
-import net.quepierts.entityharvest.harvest.HarvestWrapper;
-import net.quepierts.entityharvest.network.ClientBoundHarvestProgressPacket;
-import net.quepierts.entityharvest.network.EntityHarvestNetwork;
+import net.quepierts.entityharvest.harvest.*;
+import net.quepierts.entityharvest.network.SyncHarvestProgressPacket;
 import org.jetbrains.annotations.NotNull;
+import org.joml.Vector3f;
 import org.slf4j.Logger;
 
-import java.util.ArrayList;
 import java.util.IdentityHashMap;
-import java.util.List;
 import java.util.Map;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(EntityHarvest.MODID)
 public class EntityHarvest {
-    public static final String MODID = "entityharvest";
-    private static final Logger LOGGER = LogUtils.getLogger();
+    public static final String MODID = "entityharvestapi";
     private static final Map<Class<?>, HarvestWrapper<?>> wrappers = new IdentityHashMap<>();
 
     public EntityHarvest(IEventBus modEventBus, ModContainer modContainer) {
         NeoForge.EVENT_BUS.register(this);
-        Attachments.REGISTER.register(modEventBus);
+        EntityHarvestAttachments.REGISTER.register(modEventBus);
 
         this.registerHarvestableWrappers();
     }
 
     private void registerHarvestableWrappers() {
-        wrappers.put(Boat.class, new BoatHarvestWrapper());
+        wrappers.put(Boat.class, new BoatHarvestWrapper<>());
+        wrappers.put(ChestBoat.class, new BoatHarvestWrapper<ChestBoat>());
+        wrappers.put(Minecart.class, new MinecartHarvestWrapper<Minecart>());
+        wrappers.put(MinecartChest.class, new MinecartHarvestWrapper<MinecartChest>());
         wrappers.put(EndCrystal.class, new EndCrystalHarvestWrapper());
         wrappers.put(FallingBlockEntity.class, new FallingBlockEntityHarvestWrapper());
+        wrappers.put(Skeleton.class, new SkeletonHarvestWrapper<Skeleton>(new Vector3f(0.0f, 24.0f / 16.0f, 0.0f), EntityHarvestShapes.SKELETON_SKULL, Blocks.SKELETON_SKULL));
+        wrappers.put(WitherSkeleton.class, new SkeletonHarvestWrapper<WitherSkeleton>(new Vector3f(0.0f, 29.0f / 16.0f, 0.0f), EntityHarvestShapes.WITHER_SKELETON_SKULL, Blocks.WITHER_SKELETON_SKULL));
 
         NeoForge.EVENT_BUS.post(new RegisterHarvestWrapperEvent(wrappers));
     }
 
-    public static boolean onEntityHurt(
+    public static boolean onHarvestEntity(
             @NotNull Entity entity,
             @NotNull Player player
     ) {
@@ -80,7 +84,15 @@ public class EntityHarvest {
             return false;
         }
 
-        HarvestProgressAttachment attachment = entity.getData(Attachments.HARVEST_PROGRESS);
+        return performHarvest(player, entity, harvestable);
+    }
+
+    public static boolean performHarvest(
+            Player player,
+            Entity entity,
+            Harvestable harvestable
+    ) {
+        HarvestProgressAttachment attachment = entity.getData(EntityHarvestAttachments.HARVEST_PROGRESS);
 
         if (attachment.isDestroyed()) {
             return false;
@@ -117,10 +129,51 @@ public class EntityHarvest {
         return wrapper;
     }
 
-//    @SubscribeEvent
-    private void onAttackTarget(final AttackEntityEvent event) {
-        Player player = event.getEntity();
-        if (EntityHarvest.onEntityHurt(event.getTarget(), player)) {
+    @SubscribeEvent
+    private void onLoadEntityFromDisk(final EntityJoinLevelEvent event) {
+        if (!event.loadedFromDisk()) {
+            return;
+        }
+
+        Entity entity = event.getEntity();
+        Harvestable harvestable = EntityHarvest.getHarvestable(entity);
+
+        if (harvestable == null) {
+            return;
+        }
+
+        if (!entity.hasData(EntityHarvestAttachments.HARVEST_PROGRESS)) {
+            return;
+        }
+
+        HarvestProgressAttachment attachment = entity.getData(EntityHarvestAttachments.HARVEST_PROGRESS);
+        harvestable.init(attachment);
+    }
+
+    @SubscribeEvent
+    private void onInteractEntity(final PlayerInteractEvent.EntityInteract event) {
+        Entity target = event.getTarget();
+
+        if (!target.hasData(EntityHarvestAttachments.HARVEST_PROGRESS)) {
+            return;
+        }
+
+        HarvestProgressAttachment attachment = target.getData(EntityHarvestAttachments.HARVEST_PROGRESS);
+
+        if (!attachment.isDestroyed()) {
+            return;
+        }
+
+        Class<? extends Entity> type = target.getClass();
+        ItemStack stack = event.getItemStack();
+        if (type == Skeleton.class && stack.is(Items.SKELETON_SKULL)
+                || type == WitherSkeleton.class && stack.is(Items.WITHER_SKELETON_SKULL)
+        ) {
+            attachment.setDestroyed(false);
+            attachment.setProgress(0.0f);
+            stack.shrink(1);
+            event.getEntity().swing(event.getHand());
+            event.setCancellationResult(InteractionResult.CONSUME);
             event.setCanceled(true);
         }
     }
@@ -128,47 +181,35 @@ public class EntityHarvest {
     @SubscribeEvent
     private void onEntityTick(final EntityTickEvent.Post event) {
         Entity entity = event.getEntity();
-        if (entity.hasData(Attachments.HARVEST_PROGRESS)) {
-            HarvestProgressAttachment attachment = entity.getData(Attachments.HARVEST_PROGRESS);
+        if (entity.hasData(EntityHarvestAttachments.HARVEST_PROGRESS)) {
+            HarvestProgressAttachment attachment = entity.getData(EntityHarvestAttachments.HARVEST_PROGRESS);
             attachment.tick();
         }
     }
 
     @SubscribeEvent
-    private void onChunkWatchSent(final ChunkWatchEvent.Sent event) {
-        ServerLevel level = event.getLevel();
+    private void onStartTracking(final PlayerEvent.StartTracking event) {
+        final Entity entity = event.getTarget();
+
+        Level level = entity.level();
         if (level.isClientSide) {
             return;
         }
 
-        ChunkPos chunkPos = event.getPos();
-        int x = chunkPos.getMinBlockX();
-        int z = chunkPos.getMinBlockZ();
+        if (!(event.getEntity() instanceof ServerPlayer serverPlayer)) {
+            return;
+        }
 
-        AABB aabb = new AABB(
-                x, level.getMinBuildHeight(), z,
-                x + 16, level.getMaxBuildHeight(), z + 16
+        if (!entity.hasData(EntityHarvestAttachments.HARVEST_PROGRESS)) {
+            return;
+        }
+
+        HarvestProgressAttachment attachment = entity.getData(EntityHarvestAttachments.HARVEST_PROGRESS);
+        SyncHarvestProgressPacket packet = new SyncHarvestProgressPacket(
+                entity.getId(),
+                attachment.getProgress(),
+                attachment.isDestroyed()
         );
-
-        ServerPlayer player = event.getPlayer();
-        List<Entity> entities = level.getEntities(player, aabb);
-        ClientBoundHarvestProgressPacket packet = null;
-        List<ClientBoundHarvestProgressPacket> packets = new ArrayList<>();
-        for (Entity entity : entities) {
-            if (entity.hasData(Attachments.HARVEST_PROGRESS)) {
-                HarvestProgressAttachment attachment = entity.getData(Attachments.HARVEST_PROGRESS);
-                ClientBoundHarvestProgressPacket temp = new ClientBoundHarvestProgressPacket(entity.getId(), attachment.getProgress(), attachment.isDestroyed());
-
-                if (packet == null) {
-                    packet = temp;
-                } else {
-                    packets.add(temp);
-                }
-            }
-        }
-
-        if (packet != null) {
-            PacketDistributor.sendToPlayer(player, packet, packets.toArray(CustomPacketPayload[]::new));
-        }
+        PacketDistributor.sendToPlayer(serverPlayer, packet);
     }
 }
